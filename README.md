@@ -1,6 +1,6 @@
 # CountryWideTopics
 News crawler and extracting articles keywords and similar articles recommendation system<br>
-[@seny1004](https://github.com/seny1004)
+[@seny1004](https://github.com/seny1004) [@hyebing](https://github.com/hyebing)
 # Command
 save -> save current crawled data<br>
 day (num1) (num2) (num3) -> from today-num1, crawl num3 data per day upto today-num2<br>
