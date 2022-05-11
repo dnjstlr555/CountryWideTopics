@@ -1,0 +1,304 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css"/>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+    <script src="https://d3js.org/d3.v4.js"></script>
+
+    <!-- Load d3-cloud -->
+    <script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3.layout.cloud.js"></script>
+
+    <style>
+        body{
+            padding:4em;
+            margin: 0;
+        }
+        .container-main {
+            padding:0;
+            margin:0;
+            height:100%;
+            display:flex;
+        }
+        .lr{
+            display: flex;
+            flex-direction: column;
+            /*justify-content: center;*/
+            flex:1;
+            align-items:center;
+        }
+        .main{
+            background-color: #F5C77E;
+        }
+        .map {
+            background-color: #F7E5C8;
+            padding:1em;
+        }
+        .category-group {
+            width:90vw;
+            display: flex;
+            flex-wrap: no-wrap;
+            overflow-x: scroll;
+            overflow-y: hidden;
+            margin-bottom: 1em;
+            flex: 0 0 10em;
+        }
+        .category-group a {
+            text-decoration: none;
+            color:black;
+        }
+        .category-content {
+            flex: 0 0 auto;
+            width:13em;
+            align-items:center;
+            padding:0.6em;
+        }
+        .category-content img {
+            max-width:10em;
+        }
+        .category-content p {
+            font-size: 0.7em;
+        }
+        .category-title {
+            width:90vw;
+            background-color :#C4B69F;
+            text-align: left;
+            padding:0.7em;
+            border-radius: 0.4em 0.4em 0 0;
+        }
+        .category-title .header {
+            color:#786F61;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .category-title .tags {
+            color:#786F61;
+            display: inline-block;
+            font-size:0.7em;
+        }
+        .card-body {
+            max-width:100%
+        }
+        .card-body p {
+            overflow-y:hidden;
+            height:6em;
+        }
+        .card-body h2 {
+            font-size:medium;
+            text-align:center;
+        }
+    </style>
+    <title>Country wide topics</title>
+</head>
+
+<body>
+    <a href="/"><img src="/logo.png" id="logo" style="max-width: 8em;"><br></a>
+                        <!-- Post header-->
+                        <header class="mb-4">
+                            <!-- Post title-->
+                            <h1 class="fw-bolder mb-1" id="tag-title">코로나</h1> 
+                            <a class="badge bg-secondary text-decoration-none link-light" href="#!">#이재명</a>
+                            <a class="badge bg-secondary text-decoration-none link-light" href="#!">#윤석열</a>
+                            <a class="badge bg-secondary text-decoration-none link-light" href="#!">#오원식</a>
+                
+                        </header>
+        </div>   
+            <div class="category-title"><div class="header">인기 뉴스</div> </div>
+            <div class="category-group">
+                <div class="category-content card">
+                    <img src=https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&amp;w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="category-title"><div class="header">최신 기사</div> </div>
+            <div class="category-group">
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+                <div class="category-content card">
+                    <img src="https://img.freepik.com/free-vector/hand-drawn-formula-1-racing-car_23-2147886254.jpg?t=st=1651577403~exp=1651578003~hmac=8a77d7d70162df5031e9347c6d502d33f1dabc97536d1301269c2c3dd6a92a03&w=740" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    </div>
+                </div>
+            </div>
+           
+             
+        </div>
+    </div>
+    <a href="https://www.flaticon.com/free-icons/news" title="news icons">News icons created by Freepik - Flaticon</a>
+</body>
+<script>
+    //Import keyword's latest article and popular articles data 
+    // {latest:[{title:"blah", desc:"blah", thumbnail:"blah", date:"blah", id:1}, ...], popular:[{title:"blah", desc:"blah", thumbnail:"blah", date:"blah", id:1}, ...]}
+    class ABCKeyword {
+        //Import keyword's latest article and popular articles data 
+        // {latest:[{title:"blah", desc:"blah", thumbnail:"blah", date:"blah", id:1}, ...], popular:[{title:"blah", desc:"blah", thumbnail:"blah", date:"blah", id:1}, ...]}
+        constructor() {
+            this.data=JSON.parse(decodeURIComponent(document.getElementById("keyworddata").getAttribute("data-keyword")))
+            this.keyword=decodeURIComponent(this.data["keyword"])
+            this.popular=document.getElementsByClassName("category-group")[0]
+            this.latest=document.getElementsByClassName("category-group")[1]
+        }
+        ConvertIntoDesigned() {
+            //loads data from keyword data and returns designed one
+            throw new Error("Not implemented");
+        }
+        DrawKeywordScreen() {
+            //Get designed elements from convertintodesigned and draw it on the screen
+            throw new Error("Not implemented");
+        }
+    }
+    class Keyword extends ABCKeyword {
+        ConvertIntoDesigned() {
+            let work=this.data["popular"]
+            for(let i of work) {
+                let a=document.createElement("div")
+                a.classList="category-content card"
+                let img=document.createElement("img")
+                let thumb=i["thumb"]!=''?i["thumb"]:"/ph.jpg"
+                img.src=thumb
+
+                a.appendChild(img)
+
+                let b=document.createElement("div")
+                b.classList="card-body"
+                let h2=document.createElement('h2')
+                h2.textContent=i["title"]
+                b.appendChild(h2)
+                let p=document.createElement('p')
+                p.textContent=i["desc"]
+                b.appendChild(p)
+
+                a.appendChild(b)
+                
+                let link=document.createElement("a")
+                link.href=`/article/${i["id"]}`
+                link.appendChild(a)
+                this.popular.appendChild(link)
+            }
+            let working=this.data["latest"]
+            for(let i of working) {
+                let a=document.createElement("div")
+                a.classList="category-content card"
+                let img=document.createElement("img")
+                let thumb=i["thumb"]!=''?i["thumb"]:"/ph.jpg"
+                img.src=thumb
+
+                a.appendChild(img)
+
+                let b=document.createElement("div")
+                b.classList="card-body"
+                let h2=document.createElement('h2')
+                h2.textContent=i["title"]
+                b.appendChild(h2)
+                let p=document.createElement('p')
+                p.textContent=i["desc"]
+                b.appendChild(p)
+
+                a.appendChild(b)
+                
+                let link=document.createElement("a")
+                link.href=`/article/${i["id"]}`
+                link.appendChild(a)
+                this.latest.appendChild(link)
+            }
+        }
+        DrawKeywordScreen() {
+            this.latest.innerHTML=""
+            this.popular.innerHTML=""
+            document.getElementById("tag-title").textContent=this.keyword
+            this.ConvertIntoDesigned()
+            
+        }
+    }
+    key=new Keyword()
+    key.DrawKeywordScreen()
+
+
+</script>
+</html>
