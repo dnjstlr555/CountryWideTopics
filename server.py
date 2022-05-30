@@ -1,15 +1,18 @@
-from email.quoprimime import unquote
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from re import A
-import re
-from tkinter import E
-from unicodedata import category
-from urllib.parse import parse_qs, urlparse, quote, unquote
 
 import time
 import threading
 import json
 import os
+
+from email.quoprimime import unquote
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
+from re import A, S
+import re
+from tkinter import E
+from unicodedata import category
+from urllib.parse import parse_qs, urlparse, quote, unquote
+
 
 from selenium import webdriver
 from bs4 import BeautifulSoup
@@ -25,27 +28,31 @@ from PIL import Image
 import numpy as np
 from collections import Counter
 
-from konlpy.tag import Mecab
 from gensim.models.doc2vec import TaggedDocument
 from tqdm import tqdm
 import re
-from gensim.models import doc2vec, Doc2Vec
 
-port = 80
+from gensim.models import TfidfModel,doc2vec, Doc2Vec
+from gensim.corpora import Dictionary
+from konlpy.tag import Mecab, Okt
+import sys
+
+port = int(sys.argv[1]) if len(sys.argv)>1 else 80
+train = bool(sys.argv[2]) if len(sys.argv)>2 else False
 test = False
 
 webdriver_path="D:/school/객프/chromedriver.exe"
 jsonpath="D:/school/객프/crawler.json"
 
 class Crawler:
-    def __init__(self, comment_wait_time=5, comment_delay_time=0.1, webdriver_path="D:/school/객프/chromedriver.exe", jsonpath="./crawler.json"): #changed
+    def __init__(self, comment_wait_time=5, comment_delay_time=0.1, webdriver_path="D:/school/객프/chromedriver.exe", jsonpath="./crawler.json"):
         self._arts=[] # Stores structured article data
         self.idind=0 # Using it for indexing articles
         self.wait_time=comment_wait_time
         self.delay_time=comment_delay_time
         self.jsonpath=jsonpath
         self.webdriver_options = webdriver.ChromeOptions()
-        self.webdriver_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        self.webdriver_options._experimental_options['excludeSwitches']=['enable-logging']
         self.webdriver_options.add_argument('headless')
         self.webdriver_path=webdriver_path
         if os.path.isfile(jsonpath): #if there is a file named
@@ -70,6 +77,10 @@ class Crawler:
             self.idind=tmp["idind"]
             self._arts=tmp["arts"]
         print(f"{len(self._arts)} Loaded!")
+    def CheckDuplicated(self):
+        urls=[i["title"] for i in self._arts]
+        print(Counter(urls).most_common(10))
+        #for i in idl:
     def GetAndRegister(self, url): #Changed
         #Save structured data of given article from url
         if url in [i["url"] for i in self._arts]:
@@ -91,6 +102,19 @@ class Crawler:
             comments.append({"name":i[0], "date":i[1], "content":i[2], "likes":int(i[3]), "dislikes":int(i[4])})
         self._arts.append({"id":self.idind, "title":title, "date":date, "url":url, "topics":topics, "article":{"img":img, "content":article}, "comments":comments,"keyword":[]})
         self.idind+=1
+    def CrawlValidate(self, n=30, count=50):
+        c=Counter()
+        for i in self._arts:
+            c[i["date"].split(" ")[0]]+=1
+        c=sorted(c.items())
+        for k,v in c:
+            if v<n:
+                num=count-v
+                date=datetime.strptime(k, "%Y-%m-%d")
+                day=date.strftime("%Y%m%d")
+                print(f"Processing {day} of {num} (current:{v})")
+                self.CrawlPopularByDate(day,num)
+                self.Save()
     def CrawlPopularByDate(self, date="20220424", range=50):
         #Crawl all articles by the day
         try:
@@ -151,22 +175,17 @@ class Crawler:
         # Get a comment having ratio close to 1:1 likes and dislikes
         work=self.GetComments(id)
         maxratio=0
-        maxnum=0
         maxc={}
+        highc=self.GetHighestLC(id)
         for j in work:
             if j["likes"] is 0 or j["dislikes"] is 0:
                 continue
             h=j["likes"] if j["likes"]>j["dislikes"] else j["dislikes"]
             l=j["likes"] if j["likes"]<j["dislikes"] else j["dislikes"]
-            if (l/h)>maxratio:
-                maxratio=(l/h)
-                maxnum=l+h
+            ratio=(l/h)*(l+h)
+            if ratio>maxratio and highc != j:
+                maxratio=ratio
                 maxc=j
-            elif (l/h)==maxratio:
-                if (l+h)>maxnum:
-                    maxratio=(l/h)
-                    maxnum=l+h
-                    maxc=j
         return maxc
     def GetSummary(self, id):
         # Get replaced data for displaying summary of article
@@ -225,7 +244,6 @@ class Crawler:
     def DriverQuit(self):
         #Shutdown global chromedriver
         self.driver.quit()
-        
     def GetNewsComments(self, url, wait_time=5, delay_time=0.1):
         # (크롬)드라이버가 요소를 찾는데에 최대 wait_time 초까지 기다림 (기본값은 5초)
         driver=self.driver
@@ -342,9 +360,9 @@ class Crawler:
             print(f"Error while crawling article, {e}")
             return (None, None, None, None, None)
     @staticmethod
-    def GetSearchedArticles(search):
+    def GetSearchedArticles(search, n=5):
         url_list = []
-        for page_num in range(1, 5):
+        for page_num in range(1, n):
             url = "https://search.naver.com/search.naver?where=news&sm=tab_pge&query=" + search + "&start=" + str(page_num)
             url_list.append(url)
 
@@ -523,262 +541,292 @@ class abcKeyword(metaclass=ABCMeta):
 class Keyword(abcKeyword):
     def __init__(self, crawler):
         super().__init__(crawler)
-        self.mecab = Mecab("C:\\mecab\\mecab-ko-dic")
-        #self.model = doc2vec.Doc2Vec(vector_size=300, alpha=0.025, min_alpha=0.025, workers=8, window=8)
-        self.model=Doc2Vec.load('dart.doc2vec')
+        self.okt=Okt()
+        if not train:
+            print("Loading Doc2vec..")
+            self.model=Doc2Vec.load('dart.doc2vec')
+        else:
+            print("Loading empty shell..")
+            self.model = doc2vec.Doc2Vec(vector_size=300, alpha=0.025, min_alpha=0.025, workers=8, window=8)
+        if os.path.isfile("./keywords.json"): #if there is a file named
+            self.Load() #load
+    def Save(self, path="./keywords.json"):
+        jstr=json.dumps({"keywords":self.keywords}) #save udind, arts to json format
+        with open(path, "w") as myfile:
+            myfile.write(jstr)
+        print("Keyword saved!")
+    def Load(self, path="./keywords.json"):
+        with open(path, "r") as myfile: 
+            tmp=json.loads(myfile.read())
+            self.keywords=tmp["keywords"]
+        print("Keyword loaded!")
+    @staticmethod
+    def GetKeyowrds(x, okt=None,num=10,raw=False, tags=["Noun"]):
+        stop_words = ['은', '는', '이', '가', '의', '들', '좀', '잘', '걍', '과', '도', '를', '으로', '자', '에', '와', '하다', '년', '명', '각', '하', '아', '것', '의', '수', '등', '한', '것', '그', '이', '고', '손', '로', '순']
+        hangul = re.compile('[^ ㄱ-ㅣ가-힣+]')
+        kokt=okt if okt is not None else Okt()
+        res=[]
+        for sentence in tqdm(x):
+            # deacc=True removes punctuations
+            art=hangul.sub(" ",sentence)
+            lst=[i[0] for i in kokt.pos(art) if i[1] in tags]
+            lst=[i for i in lst if i not in stop_words]
+            res.append(lst)
+        doc_tokenized = res
+        dictionary = Dictionary()
+        BoW_corpus = [dictionary.doc2bow(doc, allow_update=True) for doc in doc_tokenized]
+        tfidf = TfidfModel(BoW_corpus, smartirs='ntc')
+        give=[]
+        for i,a in enumerate(x):
+            keydoc=[]
+            for doc in tfidf[BoW_corpus[i]]:
+                id, freq=doc
+                keydoc.append((dictionary[id], freq))
+            keywords=sorted(keydoc,key=lambda k:k[1], reverse=True)
+            n=num if num<len(keywords) else len(keywords)
+            give.append([i[0] for i in keywords[:n]])
+        return give if not raw else keywords
     def ExtractKeyword(self):
         #x가 기사들 데이터 dictionary 형태
         #return은 각 기사별로 태그되는 키워드와 카테고리의 어떤 무언가
-        twitter = Twitter()
-        stop_words = ['은', '는', '이', '가', '의', '들', '좀', '잘', '걍', '과', '도', '를', '으로', '자', '에', '와', '하다', '년', '명', '각', '하', '아', '것', '의', '수', '등', '한', '것', '그', '이', '고', '손']
-        hangul = re.compile('[^ ㄱ-ㅣ가-힣+]')
-        for a,i in enumerate(self.crawler._arts):
-            k=Counter()
-            #Return : (title, img(dict), article(string), date, topics)
-            art=i["article"]["content"]
-            if art==None:
-                continue
-            #DO Something with arts
-            # twitter함수를 통해 읽어들인 내용의 형태소를 분석한다.
-            noun_adj_list = []
-            sentences_tag = twitter.pos(art) 
-
-            # tag가 명사이거나 형용사인 단어들만 noun_adj_list에 넣어준다.
-            for word, tag in sentences_tag:
-                if tag in ['Noun' , 'Adjective'] and word not in stop_words: 
-                    noun_adj_list.append(word)
-
-
-            # 가장 많이 나온 단어부터 40개를 저장한다.
-            counts = Counter(noun_adj_list)
-            k.update(counts)
-            arr=[i[0] for i in k.most_common(3)]
-            self.crawler._arts[a]["keyword"]=arr
-            for j in arr:
+        self.keywords={}
+        keywords=self.GetKeyowrds([i["article"]["content"] for i in self.crawler._arts], num=10)
+        for i, a in enumerate(self.crawler._arts):
+            self.crawler._arts[i]["keyword"]=keywords[i]
+            for j in keywords[i]:
                 if j in self.keywords:
-                    self.keywords[j].append(i["id"])
+                    self.keywords[j].append(a["id"])
                 else:
-                    self.keywords.update({j:[i["id"]]})
-        print("Done!")
+                    self.keywords.update({j:[a["id"]]})
+        print("Extract keywords Done!")
     def ExtractKeywordsByArea(self, area):
         #area는 "서울" "대구" 이런 지역 검색어
         #문서당 3개씩 키워드를 뽑아서 하나로 합쳐서 많이 나오는 단어 리턴.
         a=self.crawler.GetSearchedArticles(area)
         urls=a[1]
-        k=Counter()
-        twitter = Twitter()
-        for i in urls:
+        result=[]
+        for i in tqdm(urls):
             #Return : (title, img(dict), article(string), date, topics)
             (tit, img, art, dat, tag)=self.crawler.CrawlArticle(i)
             if art==None:
                 continue
-            #DO Something with arts
+            result.append(art)
+            time.sleep(0.5)
             # twitter함수를 통해 읽어들인 내용의 형태소를 분석한다.
-            sentences_tag = []
-            sentences_tag = twitter.pos(art) 
-            noun_adj_list = []
-            # tag가 명사이거나 형용사인 단어들만 noun_adj_list에 넣어준다.
-            for word, tag in sentences_tag:
-                if tag in ['Noun' , 'Adjective']: 
-                    noun_adj_list.append(word)
-            # 가장 많이 나온 단어부터 40개를 저장한다.
-            counts = Counter(noun_adj_list)
-            k.update(counts)
-        return k.most_common(100)
+        k=self.GetKeyowrds(result,self.okt,raw=True, tags=["Noun"])
+        return k
     def AreasToWordcloud(self):
-        area=["서울", "부산", "대구", "인천", "광주", "대전", "울산", "제주"]
+        area=["서울", "부산", "인천"]#"대구", "인천", "광주", "대전", "울산", "제주"]
         for i in area:
             k=self.ExtractKeywordsByArea(i)
+            if len(k)<0:
+                return
             mask = np.array(Image.open('./mask.png'))
             wc = WordCloud(mode = "RGBA", background_color=None, font_path="Donoun Medium.ttf",width=400,height=400, mask=mask, )
             cloud = wc.generate_from_frequencies(dict(k))
             # 생성된 WordCloud를 test.jpg로 보낸다.
             cloud.to_file(f"{i}.png")
+            time.sleep(4)
         print("WordCloud Update Done!")
     def KeywordView(self, x):
         #키워드별 최신 기사 상위 몇개를 반환 (id만)
         #크롤러에 접근하든가..
         #{title:"blah", desc:"blah", thumbnail:"blah", date:"blah", id:1}
         pol=self.keywords[x] if x in self.keywords else "대통령"
-        latest=self.crawler.GetFilteredArticles(pol, num=10, order="latest")
-        popular=self.crawler.GetFilteredArticles(pol, num=10, order="popular")
+        latest=self.crawler.GetFilteredArticles(pol, num=20, order="latest")
+        popular=self.crawler.GetFilteredArticles(pol, num=20, order="popular")
         return {"keyword":x, "latest":latest, "popular":popular}
     def RunDoc2vec(self):
         stop_words = ['은', '는', '이', '가', '의', '들', '좀', '잘', '걍', '과', '도', '를', '으로', '자', '에', '와', '하다', '년', '명', '각', '하', '아', '것', '의', '수', '등', '한', '다', '을', '만']
         hangul = re.compile('[^ ㄱ-ㅣ가-힣+]')
         tagged_corpus_list = []
+        skipped_article=[]
+        print("Doc2Vec Preprocessing...")
         for i in tqdm(self.crawler._arts):
+            if len(i["article"]["content"])<=250:
+                skipped_article.append(i)
+                continue
             art=hangul.sub(" ",i["article"]["content"])
-            lst=self.mecab.morphs(art)
+            art=hangul.sub(" ",i["title"])+" "+art
+            lst=self.okt.morphs(art)
             lst=[i for i in lst if i not in stop_words]
             tagged_corpus_list.append(TaggedDocument(tags=[str(i["id"])], words=lst))
         print('문서의 수 :', len(tagged_corpus_list))
         self.model.build_vocab(tagged_corpus_list)
         self.model.train(tagged_corpus_list, total_examples=len(tagged_corpus_list), epochs=50)
         self.model.save('dart.doc2vec')
-        print("Model train done!")
+        print(f"Model train done! skipped article:{len(skipped_article)}")
+    def CheckDuplicated(self):
+        for k,v in self.keywords.items():
+            self.keywords[k]=list(set(v))
+        print("Done!")
     def SimilarArticle(self, id):
         #Get similar 3 articles from id article
         recom=self.model.dv.most_similar(str(id), topn=3)
         recomarr=[int(i[0]) for i in recom]
         print()
         return {"recommend":[self.crawler.GetRecommendFormat(recomarr[0]), self.crawler.GetRecommendFormat(recomarr[1]),self.crawler.GetRecommendFormat(recomarr[2])]}
+    def KeywordsLists(self):
+        return self.keywords.keys()
     def CategorizeKeywords(self, x):
         pass
     def LatestArticlesByCategory(self, category, num):
         #카테고리별로 최신 num개 리턴
         pass
 
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
-    def __init__(self, keyword :Keyword, crawler :Crawler):
-        self.key=keyword
-        self.crawl=crawler
-    def __call__(self, *args, **kwargs):
-        """Handle a request."""
-        super().__init__(*args, **kwargs)
-    @staticmethod
-    def get(path):
-        try:
-            with open(path, "r", encoding="utf8") as f:
-                    return f.read().encode('utf-8')
-        except Exception as e:
-            print(e)
-    def send(self, id, attr, data):
-        d=quote(json.dumps(data))
-        self.wfile.write(f"<div id='{id}' {attr}='{d}'></div>".encode('utf-8'))
-    def do_GET(self):
-        result = urlparse(self.path)
-        splited=result.path.split("/")
-        if result.path=="/":
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html; charset=utf-8')
-            self.end_headers() 
-            self.send("maindata","data-main",self.crawl.MainView())
-            main=self.get("./main.html")
-            self.wfile.write(main)
-        elif len(splited)>=3:
-            if splited[1]=="article":
-                try:
-                    art=int(splited[2])
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'text/html; charset=utf-8')
-                    self.end_headers()
-                    self.send("articledata","data-article",self.crawl.GetItem(art))
-                    a=self.get("./article.html")
-                    self.wfile.write(a)
-                except Exception as e:
-                    self.send_error(404)
-            elif splited[1]=="keyword":
-                try:
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'text/html; charset=utf-8')
-                    self.end_headers()
-                    data=self.key.KeywordView(unquote(splited[2]))
-                    self.send('keyworddata', 'data-keyword', data)
-                    a=self.get("./keyword.html")
-                    self.wfile.write(a)
-                except Exception as e:
-                    print(e)
-                    self.send_error(404)
-            elif splited[1]=="category":
-                try:
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'text/html; charset=utf-8')
-                    self.end_headers()
-                    data=self.crawl.CategoryView(splited[2])
-                    self.send('keyworddata', 'data-keyword', data)
-                    a=self.get("./keyword.html")
-                    self.wfile.write(a)
-                except Exception as e:
-                    print(e)
-                    self.send_error(404)
-        elif result.path=="/koreaarea.png":
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/png')
-            self.end_headers()
-            with open("./koreaarea.png", "rb") as f:
-                self.wfile.write(f.read())
-        elif result.path=="/ph.jpg":
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/jpg')
-            self.end_headers()
-            with open("./ph.jpg", "rb") as f:
-                self.wfile.write(f.read())
-        elif result.path=="/logo.png":
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/png')
-            self.end_headers()
-            with open("./logo.png", "rb") as f:
-                self.wfile.write(f.read())
-        elif unquote(result.path)=="/서울.png":
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/png')
-            self.end_headers()
-            with open("./서울.png", "rb") as f:
-                self.wfile.write(f.read())
-        elif unquote(result.path)=="/부산.png":
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/png')
-            self.end_headers()
-            with open("./부산.png", "rb") as f:
-                self.wfile.write(f.read())
-        elif unquote(result.path)=="/인천.png":
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/png')
-            self.end_headers()
-            with open("./인천.png", "rb") as f:
-                self.wfile.write(f.read())
-        elif unquote(result.path)=="/대전.png":
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/png')
-            self.end_headers()
-            with open("./대전.png", "rb") as f:
-                self.wfile.write(f.read())
-        elif result.path=="/api":
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html; charset=utf-8')
-            self.end_headers()
-            params = parse_qs(result.query)
-            if "component" in params.keys() and "method" in params.keys() and "p" in params.keys():
-                self.HandleComponent(params["component"][0].replace("\"", ""), params["method"][0].replace("\"", ""), [i.replace("\"", "") for i in params["p"]])
+def MakeHandlerClassFromArgv(keyword :Keyword, crawler :Crawler, flist, fimg, fpage, fpages):
+    class CustomHandler(BaseHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            self.key=keyword
+            self.crawl=crawler
+            self.flist=flist
+            self.fimg=fimg
+            self.fpage=fpage
+            self.fpages=fpages
+            super(CustomHandler, self).__init__(*args, **kwargs)
+        def get(self,path):
+            fd=self.fpage.index(path)
+            return self.fpages[fd]
+        def send(self, id, attr, data):
+            d=quote(json.dumps(data))
+            self.wfile.write(f"<div id='{id}' {attr}='{d}'></div>".encode('utf-8'))
+        def do_GET(self):
+            result = urlparse(self.path)
+            splited=result.path.split("/")
+            if result.path=="/":
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.end_headers() 
+                self.send("maindata","data-main",self.crawl.MainView())
+                main=self.get("main.html")
+                self.wfile.write(main)
+            elif len(splited)>=3:
+                if splited[1]=="article":
+                    try:
+                        art=int(splited[2])
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'text/html; charset=utf-8')
+                        self.end_headers()
+                        self.send("articledata","data-article",self.crawl.GetItem(art))
+                        a=self.get("article.html")
+                        self.wfile.write(a)
+                    except Exception as e:
+                        self.send_error(404)
+                elif splited[1]=="keyword":
+                    try:
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'text/html; charset=utf-8')
+                        self.end_headers()
+                        data=self.key.KeywordView(unquote(splited[2]))
+                        self.send('keyworddata', 'data-keyword', data)
+                        a=self.get("keyword.html")
+                        self.wfile.write(a)
+                    except Exception as e:
+                        print(e)
+                        self.send_error(404)
+                elif splited[1]=="category":
+                    try:
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'text/html; charset=utf-8')
+                        self.end_headers()
+                        data=self.crawl.CategoryView(splited[2])
+                        self.send('keyworddata', 'data-keyword', data)
+                        a=self.get("keyword.html")
+                        self.wfile.write(a)
+                    except Exception as e:
+                        print(e)
+                        self.send_error(404)
+            elif unquote(result.path.split("/")[1]) in self.flist:
+                fd=self.flist.index(unquote(result.path.split("/")[1])) 
+                filename=self.flist[fd]
+                print(filename)
+                self.send_response(200)
+                if filename.split(".")[1]=="png":
+                    self.send_header('Content-Type', 'image/png')
+                elif filename.split(".")[1]=="jpg":
+                    self.send_header('Content-Type', 'image/jpg')
+                self.end_headers()
+                self.wfile.write(self.fimg[fd])
+            elif result.path=="/api":
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self.end_headers()
+                params = parse_qs(result.query)
+                if "component" in params.keys() and "method" in params.keys() and "p" in params.keys():
+                    self.HandleComponent(params["component"][0].replace("\"", ""), params["method"][0].replace("\"", ""), [i.replace("\"", "") for i in params["p"]])
+                else:
+                    self.send_error(400)
+            else:
+                self.send_error(404)
+        def HandleComponent(self, comp, method, p):
+            print("got", comp, method, p)
+            if comp == "keyword":
+                if method == "GetAreaKeywords":
+                    self.wfile.write(json.dumps(self.key.GetAreaKeywords(p[0])))
+                elif method == "GetKeywords":
+                    self.wfile.write(json.dumps(self.key.GetKeyowrds()))
+                elif method == "SimilarArticle":
+                    self.wfile.write(quote(json.dumps(self.key.SimilarArticle(int(p[0])))).encode('utf-8'))
+                elif method == "KeywordsLists":
+                    self.wfile.write(json.dumps(list(self.key.KeywordsLists())).encode('utf-8'))
+            elif comp == "crawler":
+                if method == "GetHighestLC":
+                    self.wfile.write(json.dumps(self.crawl.GetHighestLC(int(p[0]))).encode('utf-8'))
+                elif method == "GetSimilarLC":
+                    self.wfile.write(json.dumps(self.crawl.GetSimilarLC(int(p[0]))).encode('utf-8'))
             else:
                 self.send_error(400)
-        else:
-            self.send_error(404)
-    def HandleComponent(self, comp, method, p):
-        print("got", comp, method, p)
-        if comp == "keyword":
-            if method == "GetAreaKeywords":
-                self.wfile.write(json.dumps(self.key.GetAreaKeywords(p[0])))
-            elif method == "GetKeywords":
-                self.wfile.write(json.dumps(self.key.GetKeyowrds()))
-            elif method == "SimilarArticle":
-                self.wfile.write(quote(json.dumps(self.key.SimilarArticle(int(p[0])))).encode('utf-8'))
-        elif comp == "crawler":
-            if method == "GetHighestLC":
-                self.wfile.write(json.dumps(self.crawl.GetHighestLC(int(p[0]))).encode('utf-8'))
-            elif method == "GetSimilarLC":
-                self.wfile.write(json.dumps(self.crawl.GetSimilarLC(int(p[0]))).encode('utf-8'))
-        else:
-            self.send_error(400)
+    return CustomHandler
+    
+class ForkingHTTPServer(ThreadingMixIn, HTTPServer):
+    pass
 
 if not test:
     crawl=Crawler(webdriver_path=webdriver_path,jsonpath=jsonpath)
-    #print(crawl._arts[len(crawl._arts)-1]['date'])
+    crawl._arts.sort(key=lambda x: x['date'], reverse=True)
+    for i in [crawl._arts[len(crawl._arts)-1]['date'], crawl._arts[0]['date']]:
+        date=datetime.strptime(i, "%Y-%m-%d %H:%M:%S")
+        a=datetime.today()-date
+        print(f"{i} : {a.days}")
     key=Keyword(crawler=crawl)
-    handler=SimpleHTTPRequestHandler(key,crawl)
-    httpd = HTTPServer(('0.0.0.0', port), handler)
+    def read(path):
+        with open(path, "rb") as f:
+            return f.read()
+    def readpage(path):
+        with open(path, "r", encoding="utf8") as f:
+            return f.read().encode('utf-8')
+    flist=["koreaarea.png", "ph.jpg", "logo.png", "서울.png", "부산.png", "인천.png", "대전.png"]
+    fimg=[]
+    for i in flist:
+        fimg.append(read(i))
+    fpage=[ "main.html", "article.html", "keyword.html"]
+    fpages=[]
+    for i in fpage:
+        print(i)
+        fpages.append(readpage(i))
+    
+    HandlerClass = MakeHandlerClassFromArgv(key,crawl, flist, fimg, fpage, fpages)
+    handler=HandlerClass
+    httpd = ForkingHTTPServer(('0.0.0.0', port), handler)
     thread = threading.Thread(target = httpd.serve_forever)
     thread.daemon = True
     thread.start()
     def fin():
         httpd.shutdown()
     print(f'Server running on port:{port}')
+    if train:
+        crawl.category=crawl.GetCategoryItems()
+        print("Category reload")
+        key.RunDoc2vec()
+        key.ExtractKeyword()
+        crawl.Save()
+        key.Save()
     while True:
         x = input('')
         a=x.split(" ")
         if x=="save":
             crawl.Save()
+            key.Save()
         elif a[0]=="day":
             print("Proceed")
             try:
@@ -796,6 +844,28 @@ if not test:
             key.RunDoc2vec()
         elif x=="key":
             key.ExtractKeyword()
+        elif x=="valid":
+            try:
+                t = threading.Thread(target=crawl.CrawlValidate)
+                t.daemon=True
+                t.start()
+            except Exception as e:
+                print("Error occured while crawlvalidate",e)
+        elif x=="check":
+            c=Counter()
+            for i in crawl._arts:
+                c[i["date"].split(" ")[0]]+=1
+            c=sorted(c.items())
+            print(c)
+        elif x=="dup":
+            key.CheckDuplicated()
+        elif x=="update":
+            crawl.category=crawl.GetCategoryItems()
+            print("Category reload")
+            key.RunDoc2vec()
+            key.ExtractKeyword()
+            crawl.Save()
+            key.Save()
 else:
     test=Crawler(webdriver_path=webdriver_path,jsonpath=jsonpath)
     test.test()
