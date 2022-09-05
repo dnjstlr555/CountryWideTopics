@@ -7,7 +7,7 @@ Comprehensive news coverage and article embedding and recommendation, keyword ex
 # Contributors
 [@dnjstlr555](https://github.com/dnjstlr555) [@seny1004](https://github.com/seny1004) [@hyebing](https://github.com/hyebing) [@sara4423](https://github.com/sara4423)
 ## Conference
-**Oh Won Sik, et al. (2022-06-23-25). News Article Recommendation and Curation System based on Document Embedding and Keyword Extraction. Korean Institute of Smart Media 2021 Conference.**
+**Oh Won Sik, et al. (2022-06-23-25). News Article Recommendation and Curation System based on Document Embedding and Keyword Extraction. Korean Institute of Smart Media 2022 Conference.**
 
 # Command
 `save` save current crawled data<br>
